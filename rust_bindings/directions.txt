@@ -1,0 +1,7 @@
+bindgen will freak out because it doesn't know about the definitions
+of uint{8,16,32}_t as well as sint32_t (which is used in ps.h), so 
+you may have to add the line #include <stdint.h> at the beginning of
+the desired header file in order to get bindgen to work properly
+To get sint32_t to work, I just added 'typedef int sint32_t' to
+the top of the desired header file.
+
