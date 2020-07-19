@@ -6,11 +6,12 @@ authors = ["Peter Dinda <pdinda@northwestern.edu>"]
 [lib]
 crate-type = ["staticlib"]
 
+[dependencies]
+libc = { version = "0.2.48", default-feature = false }
+
 
 [profile.dev]
 panic = "abort"    # no stack unwind on rust panic
 
 [profile.release]
 panic = "abort"    # no stuck unwind on rust panic
-
-[dependencies]

@@ -90,6 +90,8 @@ memcpy (void * dst, const void * src, size_t n)
 }
 
 
+
+
 void * 
 memset (void * dst, char c, size_t n)
 {
@@ -165,6 +167,8 @@ memcmp (const void * s1_, const void * s2_, size_t n)
 
     return 0;
 }
+
+int bcmp(const void * s1_, const void * s2_, size_t n) { return memcmp (s1_, s2_, n); }
 
 
 int 

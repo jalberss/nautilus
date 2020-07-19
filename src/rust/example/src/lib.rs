@@ -33,19 +33,6 @@ pub mod threads;
 pub const MIN_ALIGN: usize = 16;
 use alloc::boxed::Box;
 
-// pub unsafe extern "C" fn bcmp(s1: *const u8, s2: *const u8, n: usize) -> i32 {
-//     let mut i = 0;
-//     while i < n {
-//         let a = *s1.offset(i as isize);
-//         let b = *s2.offset(i as isize);
-//         if a != b {
-//             return 1;
-//         }
-//         i += 1;
-//     }
-//     0
-// }
-
 // nomangle + pub extern "C" means standard C linkage and visibility
 #[no_mangle]
 pub extern "C" fn nk_rust_example(a: i32, b: i32) -> i32
@@ -106,15 +93,10 @@ pub extern "C" fn nk_rust_nk_dev_dump_devices() {
         nk_vc_printf("Post NK Call\n\0".as_ptr() as *const i8);
     };
 
-
-    let _state_lock_flags: uint8_t = unsafe {spin_lock_irq_save(&mut state_lock as *mut u32)};
-
+    // let state_lock: -> asdfasdfasdf
     // ignore lock for now (eventually get gcc to give us
     // an instantiation for spin_lock_irq_save and not
     // just inline everything.
-
-
-
     
     unsafe {
         nk_vc_printf("Pre NK Rust Call\n\0".as_ptr() as *const i8);
@@ -126,7 +108,7 @@ pub extern "C" fn nk_rust_nk_dev_dump_devices() {
             nk_dev_printf(d);
             cur = (*cur).next;
         }
-        spin_unlock_irq_restore(&mut state_lock,_state_lock_flags);
+	// spin_unlock_irq_restore(&mut state_lock,_state_lock_flags);
         nk_vc_printf("Post NK Rust Call\n\0".as_ptr() as *const i8);        
     }
 

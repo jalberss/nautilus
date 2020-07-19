@@ -37,13 +37,13 @@
 #define DEBUG(fmt, args...) DEBUG_PRINT("dev: " fmt, ##args)
 #define INFO(fmt, args...) INFO_PRINT("dev: " fmt, ##args)
 
-static spinlock_t state_lock;
+spinlock_t state_lock;
 
 #define STATE_LOCK_CONF uint8_t _state_lock_flags
 #define STATE_LOCK() _state_lock_flags = spin_lock_irq_save(&state_lock)
 #define STATE_UNLOCK() spin_unlock_irq_restore(&state_lock, _state_lock_flags);
 
-static struct list_head dev_list;
+struct list_head dev_list;
 
 
 int nk_dev_init()

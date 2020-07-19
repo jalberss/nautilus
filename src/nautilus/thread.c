@@ -44,6 +44,10 @@
 
 extern uint8_t malloc_cpus_ready;
 
+void set_vc_for_rust(){
+  get_cur_thread()->vc = get_cur_thread()->parent->vc;
+  nk_vc_printf("Hello\n");
+}
 
 
 #ifndef NAUT_CONFIG_DEBUG_THREADS
