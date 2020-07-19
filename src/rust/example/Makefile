@@ -19,8 +19,7 @@ obj-y := glue.o libexample.a
 #
 .PHONY:  src/rust/example/libexample.a clean
 src/rust/example/libexample.a:
-	(cd src/rust/example &&	cargo xbuild --release --target x86_64-nautilus-core-kernel)
-	(cd src/rust/example && cp target/x86_64-nautilus-core-kernel/release/libexample.a .)
+	(cd src/rust/example &&	cargo build --release && cp target/release/libexample.a .)
 
 #
 #
