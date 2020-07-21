@@ -45,6 +45,16 @@ spinlock_t state_lock;
 
 struct list_head dev_list;
 
+#ifdef NAUT_CONFIG_RUST_SUPPORT
+// This is just for getting by static restriction;
+void nk_rust_lock(uint8_t* rust_state_lock_flags) {
+  *rust_state_lock_flags = spin_lock_irq_save(&state_lock);
+}
+
+void nk_rust_unlock(uint8_t rust_state_lock_flags) {
+  spin_unlock_irq_restore(&state_lock, rust_state_lock_flags);
+}
+#endif
 
 int nk_dev_init()
 {

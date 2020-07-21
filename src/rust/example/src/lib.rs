@@ -1,16 +1,10 @@
 #![feature(compiler_builtins)]
 #![feature(allocator_api)]
-//#![feature(alloc)]
 #![feature(alloc_error_handler)]
-// no stdlib
 #![no_std]
-//#![no_main]
-// Give us this feature to override?
 #![feature(start)]
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)] 
-
-// cargo cult
 #![feature(lang_items)]
 #![no_builtins]
 
@@ -22,10 +16,8 @@ macro_rules! containerof_field_offset {
     })
 }
 
-// avoid buildins - we want it to use our library
 extern crate libc;
 extern crate alloc;
-// extern crate compiler_builtins;
 pub mod bindings;
 pub mod dev_bindings;
 pub mod spinlock_bindings;
@@ -41,12 +33,8 @@ pub extern "C" fn nk_rust_example(a: i32, b: i32) -> i32
     let mut v: Vec<i32> = Vec::new();
     v.push(a);
     v.push(b);
+    nk_rust_nk_dev_dump_devices();
     call_nk_thread_create();
-    // loop {
-    //     unsafe {
-    //         thread_bindings::nk_yield();
-    //     }
-    // };
     let a = v.pop().unwrap();
     let b = v.pop().unwrap();
     return a+b;
@@ -71,29 +59,37 @@ pub fn nk_rust_panic(_info: &PanicInfo) -> !
    loop { }
 }
 
+static mut _state_lock_flags: u8 = 0;
 
 ///////////////////////////////////////////////////////////////
 #[link(name = "dev")] 
 extern {
-    static mut state_lock: libc::uint32_t;
+    static mut state_lock: u32;
 }
 
 extern {
     static mut dev_list: dev_bindings::list_head;
 }
 
+#[link(name = "dev")]
+extern {
+    fn nk_rust_lock(_state_lock_flags: *mut u8);
+    fn nk_rust_unlock(_state_lock_flags: u8);
+}
+
 #[no_mangle]
 pub extern "C" fn nk_rust_nk_dev_dump_devices() {
-    use ::libc::{uint8_t, c_char};
+    use ::libc::c_char;
     use dev_bindings::*;
     use bindings::*;
+    use spinlock_bindings;
     unsafe {
         nk_vc_printf("Pre NK Call\n\0".as_ptr() as *const i8);
         nk_dev_dump_devices();
         nk_vc_printf("Post NK Call\n\0".as_ptr() as *const i8);
     };
 
-    // let state_lock: -> asdfasdfasdf
+    unsafe {nk_rust_lock(&mut _state_lock_flags);}
     // ignore lock for now (eventually get gcc to give us
     // an instantiation for spin_lock_irq_save and not
     // just inline everything.
@@ -108,7 +104,6 @@ pub extern "C" fn nk_rust_nk_dev_dump_devices() {
             nk_dev_printf(d);
             cur = (*cur).next;
         }
-	// spin_unlock_irq_restore(&mut state_lock,_state_lock_flags);
         nk_vc_printf("Post NK Rust Call\n\0".as_ptr() as *const i8);        
     }
 
@@ -117,29 +112,21 @@ pub extern "C" fn nk_rust_nk_dev_dump_devices() {
     for x in dev_iter {
         nk_dev_printf(x);
     }
-    unsafe{
-        nk_vc_printf("\nPost With Iterators\n\0".as_ptr() as *const i8);
-        nk_vc_printf("\nPre With IntoIterator\n\0".as_ptr() as *const i8);
-        let nk_dev: *mut nk_dev = ((dev_list.next) as *mut c_char).sub(containerof_field_offset!(nk_dev : dev_list_node)) as *mut nk_dev;
-        for x in (*nk_dev).into_iter() {
-            nk_dev_printf(x);
-        }
-        nk_vc_printf("\nPost With IntoIterator\n\0".as_ptr() as *const i8);
-    }
+    unsafe {nk_vc_printf("\nPost With Iterators\n\0".as_ptr() as *const i8);}
 
     unsafe {nk_vc_printf("\nPre With map\n\0".as_ptr() as *const i8);}
     let dev_iter = dev_iterator::new();
     dev_iter.into_iter().for_each(|x| nk_dev_printf(x));
-    unsafe {nk_vc_printf("\nPost With map\n\0".as_ptr() as *const i8);}
-
+    unsafe {nk_vc_printf("\nPost With map\n\0".as_ptr() as *const i8);
+	    nk_rust_unlock(_state_lock_flags); }
 }
 
 fn nk_dev_printf(d: *mut dev_bindings::nk_dev){
     use libc::c_char;
     use bindings::*;
-     unsafe {
-         let t =  nk_dev_dispatch((*d).type_).as_ptr() as *const i8;
-         nk_vc_printf("%s: %s flags=0x%lx interface=%p state=%p\n\0".as_ptr() as *const i8, &(*d).name[0] as *const c_char, t, (*d).flags, (*d).interface, (*d).state);
+    unsafe {
+        let t =  nk_dev_dispatch((*d).type_).as_ptr() as *const i8;
+        nk_vc_printf("%s: %s flags=0x%lx interface=%p state=%p\n\0".as_ptr() as *const i8, &(*d).name[0] as *const c_char, t, (*d).flags, (*d).interface, (*d).state);
     }
 }
 
@@ -159,20 +146,21 @@ fn nk_dev_dispatch(name: dev_bindings::nk_dev_type_t) -> & 'static str {
     }
 }
 
+#[allow(unused_variables)]
 fn call_nk_thread_create(){
     use threads::thread_bindings::*;
     use libc::c_void;
     let fp: nk_thread_fun_t = Some(call_test);
-    let mut tid1: Box<u64> = Box::new(0);
-    let mut tid2: Box<u64> = Box::new(0);
+    let tid1: Box<u64> = Box::new(0);
+    let tid2: Box<u64> = Box::new(0);
     let tid_p1: *mut nk_thread_id_t = Box::into_raw(tid1) as *mut nk_thread_id_t;
     let tid_p2: *mut nk_thread_id_t = Box::into_raw(tid2) as *mut nk_thread_id_t;
         
     unsafe {
         rust_puts("Before create\0");
-        let mut x = nk_thread_start(fp, null_mut(), null_mut(), 0, 0, tid_p1, -1);
+        let x = nk_thread_start(fp, null_mut(), null_mut(), 0, 0, tid_p1, -1);
         nk_vc_printf("Ret value is: %d\n\0".as_ptr() as *mut i8, x);
-        let mut res: *mut *mut c_void = null_mut();
+        let res: *mut *mut c_void = null_mut();
         nk_join(*tid_p1, res);
         rust_puts("Post create\0");
     }
